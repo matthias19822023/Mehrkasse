@@ -2249,4 +2249,3 @@ fun exportTotalPdf(context: Context, db: KassenDb, org: OrganizationInfo, prefs:
         createReportPdf(context, "Gesamtauswertung.pdf", "Gesamtauswertung", org, "Gesamter gespeicherter Zeitraum", rows)
     }
 }
-}
