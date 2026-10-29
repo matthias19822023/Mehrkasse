@@ -1,0 +1,51 @@
+name: Create Mehrkasse Signing Key
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  create-key:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+    steps:
+      - name: Check required secrets
+        shell: bash
+        run: |
+          test -n "$ANDROID_KEYSTORE_PASSWORD" || { echo "Keystore password fehlt"; exit 1; }
+          test -n "$ANDROID_KEY_PASSWORD" || { echo "Key password fehlt"; exit 1; }
+          test "$ANDROID_KEY_ALIAS" = "mehrkasse-release" || { echo "ANDROID_KEY_ALIAS muss mehrkasse-release sein"; exit 1; }
+
+      - name: Generate permanent signing key
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/signing"
+          keytool -genkeypair -v \
+            -keystore "$RUNNER_TEMP/signing/mehrkasse-signing.jks" \
+            -storetype JKS \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -keyalg RSA \
+            -keysize 3072 \
+            -validity 10000 \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -keypass "$ANDROID_KEY_PASSWORD" \
+            -dname "CN=Mehrkasse, OU=App, O=Mehrkasse, L=Hamburg, ST=Hamburg, C=DE"
+
+      - name: Encode key for GitHub Secret
+        shell: bash
+        run: |
+          base64 -w 0 "$RUNNER_TEMP/signing/mehrkasse-signing.jks" > "$RUNNER_TEMP/signing/ANDROID_KEYSTORE_BASE64.txt"
+          test -s "$RUNNER_TEMP/signing/ANDROID_KEYSTORE_BASE64.txt"
+
+      - name: Upload temporary key artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TEMPORARY-Mehrkasse-Signing-Key
+          path: ${{ runner.temp }}/signing/ANDROID_KEYSTORE_BASE64.txt
+          retention-days: 1
+          if-no-files-found: error
