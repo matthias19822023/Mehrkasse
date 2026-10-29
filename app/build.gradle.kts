@@ -1,12 +1,15 @@
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
 }
+
 android {
     namespace = "de.kassenapp.tablet"
     compileSdk = 35
+
     defaultConfig {
         applicationId = "de.kassenapp.tablet"
         minSdk = 26
@@ -14,14 +17,43 @@ android {
         versionCode = 2
         versionName = "2.0"
     }
-    compileOptions {
-      sourceCompatibility = JavaVersion.VERSION_17
-      targetCompatibility = JavaVersion.VERSION_17
+
+    signingConfigs {
+        create("stable") {
+            val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+                ?: throw GradleException(
+                    "ANDROID_KEYSTORE_PATH is missing; see SIGNING_SETUP.md"
+                )
+
+            storeFile = file(keystorePath)
+
+            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                ?: throw GradleException("ANDROID_KEYSTORE_PASSWORD is missing")
+
+            keyAlias = System.getenv("ANDROID_KEY_ALIAS")
+                ?: throw GradleException("ANDROID_KEY_ALIAS is missing")
+
+            keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                ?: throw GradleException("ANDROID_KEY_PASSWORD is missing")
+        }
     }
+
+    buildTypes {
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("stable")
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
     kotlinOptions {
-      jvmTarget = "17"
+        jvmTarget = "17"
     }
 }
+
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-compose:1.10.1")
